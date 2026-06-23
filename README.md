@@ -1,41 +1,43 @@
 # ghqv
 
-`ghqv` は、ghq が管理する複数の独立した Git リポジトリを、1つの仮想ワークスペースへ再現可能に集約する CLI です。モノレポへ移行せず、各リポジトリの Git 履歴・ブランチ・CI・リリース単位を維持したまま、コーディングエージェントや開発者へ横断的なソースコードとアーキテクチャ情報を提供します。
+[English](README.md) | [日本語](README.ja.md)
 
-## 必要環境
+`ghqv` is a CLI that aggregates multiple independent Git repositories managed by [ghq](https://github.com/x-motemen/ghq) into a single reproducible virtual workspace. Without migrating to a real monorepo, it preserves each repository's Git history, branches, CI, and release boundaries while giving coding agents and developers cross-cutting access to source code and architecture context.
 
-- macOS または Linux
+## Requirements
+
+- macOS or Linux
 - `git`
 - [`ghq`](https://github.com/x-motemen/ghq)
 
-配布バイナリは Bun `--compile` によるシングルバイナリのため、利用者側に Bun や Node.js は不要です。
+The distributed binary is a single executable built with Bun `--compile`, so users do not need Bun or Node.js installed.
 
-## インストール
+## Installation
 
-Homebrew 経由 (専用 tap):
+Homebrew (dedicated tap):
 
 ```bash
 brew install Yicru/tap/ghqv
 ```
 
-`ghq` が依存として自動的にインストールされます。その後:
+`ghq` is installed automatically as a dependency. To upgrade:
 
 ```bash
 brew upgrade ghqv
 ```
 
-またはリリースアーカイブからバイナリを取得して PATH へ配置してください。
+Alternatively, grab a binary from the [releases](https://github.com/Yicru/ghqv/releases) and put it on your `PATH`.
 
-## 基本的な使い方
+## Basic usage
 
 ```bash
-# ワークスペース作成
+# Create a workspace
 ghqv init myapp-vmono
 
-# 移動
+# Move into it
 cd "$(ghqv path myapp-vmono)"
 
-# organization をまたいで repository を登録
+# Register repositories across organizations
 ghqv add github.com/organization-a/backend \
   --as backend \
   --role "Backend API and services" \
@@ -47,17 +49,17 @@ ghqv add github.com/organization-b/frontend \
   --tech TypeScript React \
   --depends-on backend
 
-# 変更予定を確認
+# Preview the planned changes
 ghqv sync --dry-run
 
-# 適用
+# Apply
 ghqv sync
 
-# 状態確認
+# Inspect state
 ghqv status
 ```
 
-チーム共有済みワークスペースの場合:
+For a team-shared workspace:
 
 ```bash
 ghqv clone git@github.com:organization-a/myapp-vmono.git
@@ -65,36 +67,36 @@ cd "$(ghqv path myapp-vmono)"
 ghqv status
 ```
 
-## コマンド
+## Commands
 
-| コマンド | 説明 |
+| Command | Description |
 |---|---|
-| `ghqv init <name>` | ワークスペースを作成する |
-| `ghqv clone <url>` | 共有ワークスペースリポジトリを clone する |
-| `ghqv add <source>` | repository を manifest へ追加する |
-| `ghqv remove <name>` | repository を manifest から削除する |
-| `ghqv sync` | manifest に基づき symlink を materialize する |
-| `ghqv status` | ワークスペースの状態を表示する |
-| `ghqv list` | ワークスペース一覧を表示する |
-| `ghqv path <name>` | ワークスペースの絶対パスを出力する |
-| `ghqv doctor` | 環境とワークスペースを診断する |
-| `ghqv config` | 設定を管理する |
+| `ghqv init <name>` | Create a workspace |
+| `ghqv clone <url>` | Clone a shared workspace repository |
+| `ghqv add <source>` | Add a repository to the manifest |
+| `ghqv remove <name>` | Remove a repository from the manifest |
+| `ghqv sync` | Materialize manifest repositories as symlinks |
+| `ghqv status` | Show workspace state |
+| `ghqv list` | List workspaces |
+| `ghqv path <name>` | Print the absolute path of a workspace |
+| `ghqv doctor` | Diagnose the environment and workspace |
+| `ghqv config` | Manage configuration |
 
-共通オプション: `-w/--workspace`, `--workspace-root`, `--json`, `--color`, `-q/--quiet`, `-v/--verbose`。
+Global options: `-w/--workspace`, `--workspace-root`, `--json`, `--color`, `-q/--quiet`, `-v/--verbose`.
 
-## 設計
+## Design
 
-ワークスペースは `~/ghq/workspaces` (既定値) 配下に、独立した Git リポジトリとして作成されます。各 source repository は相対 symlink としてワークスペース内へ配置され、実体は ghq の checkout を再利用します。manifest (`.ghqv.yaml`) と生成ファイル (`AGENTS.md`, `CLAUDE.md`, `.gitignore`) が desired state を宣言します。
+A workspace is created under `~/ghq/workspaces` (default) as an independent Git repository. Each source repository is placed into the workspace as a relative symlink that reuses the existing ghq checkout. The manifest (`.ghqv.yaml`) and generated files (`AGENTS.md`, `CLAUDE.md`, `.gitignore`) declare the desired state.
 
-詳細は `ghqv-detailed-design.md` を参照してください。
+See `ghqv-detailed-design.md` for the full design.
 
-## 開発
+## Development
 
 ```bash
 bun install
-bun run dev           # 実行
-bun test              # テスト
-bun run typecheck     # 型検査
+bun run dev           # run
+bun test              # tests
+bun run typecheck     # type check
 bun run lint          # lint
-bun run build         # シングルバイナリを dist/ へ生成
+bun run build         # build single-file binaries into dist/
 ```
