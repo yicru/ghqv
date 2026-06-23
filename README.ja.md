@@ -88,8 +88,6 @@ ghqv status
 
 ワークスペースは `~/ghq/workspaces` (既定値) 配下に、独立した Git リポジトリとして作成されます。各 source repository は相対 symlink としてワークスペース内へ配置され、実体は ghq の checkout を再利用します。manifest (`.ghqv.yaml`) と生成ファイル (`AGENTS.md`, `CLAUDE.md`, `.gitignore`) が desired state を宣言します。
 
-詳細は `ghqv-detailed-design.md` を参照してください。
-
 ## 開発
 
 ```bash

@@ -88,8 +88,6 @@ Global options: `-w/--workspace`, `--workspace-root`, `--json`, `--color`, `-q/-
 
 A workspace is created under `~/ghq/workspaces` (default) as an independent Git repository. Each source repository is placed into the workspace as a relative symlink that reuses the existing ghq checkout. The manifest (`.ghqv.yaml`) and generated files (`AGENTS.md`, `CLAUDE.md`, `.gitignore`) declare the desired state.
 
-See `ghqv-detailed-design.md` for the full design.
-
 ## Development
 
 ```bash
