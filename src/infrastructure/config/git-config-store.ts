@@ -13,7 +13,10 @@ export class GitConfigStore implements ConfigStore {
       command: 'git',
       args: ['config', '--global', 'ghqv.workspaceRoot'],
       output: 'capture',
+      allowFailure: true,
     });
+    // `git config <key>` exits 1 when the key is absent; treat that as "unset".
+    if (r.exitCode !== 0) return null;
     const v = r.stdout.trim();
     return v.length === 0 ? null : v;
   }

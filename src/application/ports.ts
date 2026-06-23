@@ -11,6 +11,7 @@ export interface ProcessRequest {
   output?: 'capture' | 'inherit';
   signal?: AbortSignal;
   maxOutputBytes?: number;
+  allowFailure?: boolean;
 }
 
 export interface ProcessResult {

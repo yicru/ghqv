@@ -67,7 +67,7 @@ export class BunProcessRunner implements ProcessRunner {
     const exitCode = exit === null ? null : exit;
     const signal: NodeJS.Signals | null = null;
 
-    if (timedOut || (exitCode !== null && exitCode !== 0)) {
+    if (timedOut || (exitCode !== null && exitCode !== 0 && !request.allowFailure)) {
       throw new GhqvError(
         'GHQV_EXTERNAL_COMMAND_FAILED',
         `external command failed: ${shellDisplay(request.command, request.args)}`,
