@@ -61,7 +61,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          git clone https://x-access-token:${GH_TOKEN}@github.com/Yicru/homebrew-ghqv.git tap
+          git clone https://x-access-token:${GH_TOKEN}@github.com/Yicru/homebrew-tap.git tap
           mkdir -p tap/Formula
           mv ghqv.rb tap/Formula/ghqv.rb
           cd tap

@@ -15,7 +15,7 @@
 Homebrew 経由 (専用 tap):
 
 ```bash
-brew install Yicru/ghqv/ghqv
+brew install Yicru/tap/ghqv
 ```
 
 `ghq` が依存として自動的にインストールされます。その後:
