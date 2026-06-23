@@ -12,10 +12,16 @@
 
 ## インストール
 
-Homebrew 経由 (予定):
+Homebrew 経由 (専用 tap):
 
 ```bash
-brew install <tap>/ghqv
+brew install Yicru/ghqv/ghqv
+```
+
+`ghq` が依存として自動的にインストールされます。その後:
+
+```bash
+brew upgrade ghqv
 ```
 
 またはリリースアーカイブからバイナリを取得して PATH へ配置してください。

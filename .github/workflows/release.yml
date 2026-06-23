@@ -1,0 +1,72 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun test
+      - name: Build binaries
+        env:
+          GHQV_VERSION: ${{ github.ref_name }}
+          GHQV_COMMIT: ${{ github.sha }}
+          GHQV_BUILD_DATE: ${{ github.event.head_commit.timestamp }}
+        run: |
+          # GHQV_VERSION from the tag, stripped of the leading "v" for archive naming
+          export GHQV_VERSION="${GHQV_VERSION#v}"
+          bun run scripts/build.ts
+      - name: Upload release archives
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/checksums.txt
+          generate_release_notes: true
+
+  update-tap:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Fetch checksums from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist
+          gh release download "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" -p 'checksums.txt' -D dist
+      - name: Generate formula
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          v="${VERSION#v}"
+          bun run scripts/generate-formula.ts "$v" dist/checksums.txt > ghqv.rb
+      - name: Push formula to tap
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone https://x-access-token:${GH_TOKEN}@github.com/Yicru/homebrew-ghqv.git tap
+          mkdir -p tap/Formula
+          mv ghqv.rb tap/Formula/ghqv.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/ghqv.rb
+          git commit -m "ghqv ${{ github.ref_name }}" || exit 0
+          git push
