@@ -30,6 +30,7 @@ export interface GhqClient {
   version(): Promise<string>;
   roots(): Promise<string[]>;
   resolveExact(source: string): Promise<string[]>;
+  list(): Promise<string[]>;
   get(source: string, options: { interactive: boolean }): Promise<void>;
 }
 

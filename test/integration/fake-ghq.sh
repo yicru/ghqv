@@ -23,7 +23,7 @@ case "${1:-}" in
     git clone --quiet "$remote" "$dest" >&2
     ;;
   list)
-    # expect: list --full-path --exact <source>
+    # support: list (all) | list --full-path --exact <source>
     src=""
     shift # drop "list"
     while [ $# -gt 0 ]; do
@@ -32,9 +32,16 @@ case "${1:-}" in
         *) src="$1"; shift ;;
       esac
     done
-    dest="${GHQ_ROOT}/${src}"
-    if [ -d "$dest" ]; then
-      echo "$dest"
+    if [ -z "$src" ]; then
+      find "$GHQ_ROOT" -type d -name '.git' -print | while read g; do
+        rel="${g#$GHQ_ROOT/}"
+        echo "${rel%/.git}"
+      done
+    else
+      dest="${GHQ_ROOT}/${src}"
+      if [ -d "$dest" ]; then
+        echo "$dest"
+      fi
     fi
     ;;
   *)

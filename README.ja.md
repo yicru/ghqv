@@ -72,6 +72,7 @@ ghqv status
 | コマンド | 説明 |
 |---|---|
 | `ghqv init <name>` | ワークスペースを作成する |
+| `ghqv setup` | 対話的にワークスペースを作成し repository を登録する |
 | `ghqv clone <url>` | 共有ワークスペースリポジトリを clone する |
 | `ghqv add <source>` | repository を manifest へ追加する |
 | `ghqv remove <name>` | repository を manifest から削除する |

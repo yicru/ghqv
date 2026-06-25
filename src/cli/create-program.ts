@@ -21,6 +21,7 @@ import { registerInit } from './commands/init';
 import { registerList } from './commands/list';
 import { registerPath } from './commands/path';
 import { registerRemove } from './commands/remove';
+import { registerSetup } from './commands/setup';
 import { registerStatus } from './commands/status';
 import { registerSync } from './commands/sync';
 import type { CliContext } from './context';
@@ -114,6 +115,7 @@ export function createProgram(): Command {
   registerPath(program, mkCtx);
   registerDoctor(program, mkCtx);
   registerConfig(program, mkCtx);
+  registerSetup(program, mkCtx);
 
   return program;
 }

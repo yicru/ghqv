@@ -47,8 +47,15 @@ case "\${1:-}" in
     while [ \$# -gt 0 ]; do
       case "\$1" in --full-path|--exact) shift ;; *) src="\$1"; shift ;; esac
     done
-    dest="\${GHQ_ROOT}/\${src}"
-    if [ -d "\$dest" ]; then echo "\$dest"; fi
+    if [ -z "\$src" ]; then
+      find "\$GHQ_ROOT" -type d -name ".git" -print | while read g; do
+        rel="\${g#\$GHQ_ROOT/}"
+        echo "\${rel%/.git}"
+      done
+    else
+      dest="\${GHQ_ROOT}/\${src}"
+      if [ -d "\$dest" ]; then echo "\$dest"; fi
+    fi
     ;;
   *) echo "fake-ghq: unsupported: \$*" >&2; exit 1 ;;
 esac

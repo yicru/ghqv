@@ -67,11 +67,20 @@ cd "$(ghqv path myapp-vmono)"
 ghqv status
 ```
 
+## Interactive setup
+
+`ghqv setup` walks you through creating a workspace in one go: workspace name, description, then fuzzy-find repositories from your `ghq` checkout and assign a logical name, role, tech tags, and `depends_on` for each. It runs `init`, `add`, and `sync` automatically.
+
+```bash
+ghqv setup
+```
+
 ## Commands
 
 | Command | Description |
 |---|---|
 | `ghqv init <name>` | Create a workspace |
+| `ghqv setup` | Interactively create a workspace and register repositories |
 | `ghqv clone <url>` | Clone a shared workspace repository |
 | `ghqv add <source>` | Add a repository to the manifest |
 | `ghqv remove <name>` | Remove a repository from the manifest |

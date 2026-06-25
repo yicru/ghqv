@@ -29,6 +29,18 @@ export class GhqProcessClient implements GhqClient {
       .filter((l) => l.length > 0);
   }
 
+  async list(): Promise<string[]> {
+    const r = await this.runner.run({
+      command: 'ghq',
+      args: ['list'],
+      output: 'capture',
+    });
+    return r.stdout
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+  }
+
   async get(source: string, _options: { interactive: boolean }): Promise<void> {
     try {
       await this.runner.run({

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { GitConfigStore } from '../../src/infrastructure/config/git-config-store';
 import type { ProcessRequest, ProcessResult, ProcessRunner } from '../../src/application/ports';
+import { GitConfigStore } from '../../src/infrastructure/config/git-config-store';
 
 function fakeRunner(result: Partial<ProcessResult>): ProcessRunner {
   return {
