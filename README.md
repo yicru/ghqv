@@ -72,6 +72,8 @@ ghqv status
 
 `ghqv setup` walks you through creating a workspace in one go: workspace name, description, then fuzzy-find repositories from your `ghq` checkout and assign a logical name, role, tech tags, and `depends_on` for each. It runs `init`, `add`, and `sync` automatically.
 
+If Claude Code (`claude`) or Codex (`codex`) is installed, `ghqv setup` offers to infer each repository's `role` and `tech` tags from its README / manifest, pre-filled for you to confirm or edit. Detection is optional and falls back to manual entry when no AI CLI is available.
+
 ```bash
 ghqv setup
 ```

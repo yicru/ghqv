@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
 import { checkbox, confirm, input } from '@inquirer/prompts';
 import type { Command } from 'commander';
 import { addRepository } from '../../application/edit-manifest';
@@ -9,6 +10,7 @@ import { validateName } from '../../domain/manifest';
 import { isValidWorkspaceName } from '../../domain/workspace';
 import { renderSyncPlan } from '../../presentation/console-reporter';
 import { emitJson, okEnvelope } from '../../presentation/json-reporter';
+import { type AiSuggestion, type AiTool, detectAiTools, suggestRoleTech } from '../ai';
 import type { CliContext } from '../context';
 
 interface RepoDraft {
@@ -116,7 +118,49 @@ async function promptRepositories(all: string[], already: Set<string>): Promise<
   return picked ?? [];
 }
 
-async function promptRepoDetails(source: string, existingNames: string[]): Promise<RepoDraft> {
+/** Gather a compact textual snapshot of a repository for the AI to reason over. */
+async function buildRepoContext(ctx: CliContext, source: string): Promise<string> {
+  const paths = await ctx.ghq.resolveExact(source);
+  let out = `source: ${source}`;
+  if (paths.length === 0) return out;
+  const path = paths[0] ?? '';
+  out += `\npath: ${path}`;
+  for (const f of ['README.md', 'README.MD', 'readme.md', 'README']) {
+    try {
+      const t = await ctx.fs.readText(join(path, f));
+      out += `\n--- ${f} (excerpt) ---\n${t.slice(0, 3000)}`;
+      break;
+    } catch {
+      // file absent
+    }
+  }
+  try {
+    const pkg = await ctx.fs.readText(join(path, 'package.json'));
+    out += `\n--- package.json (excerpt) ---\n${pkg.slice(0, 1500)}`;
+  } catch {
+    // not a node project
+  }
+  try {
+    const entries = await ctx.fs.readdir(path);
+    out += `\n--- top-level entries ---\n${entries.slice(0, 40).join(', ')}`;
+  } catch {
+    // unreadable
+  }
+  return out;
+}
+
+function parseTech(raw: string): string[] {
+  return raw
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+}
+
+async function promptRepoDetails(
+  source: string,
+  existingNames: string[],
+  suggestion?: AiSuggestion,
+): Promise<RepoDraft> {
   const defaultName = basename(source);
   const as = await input({
     message: `Logical name for ${source}:`,
@@ -133,29 +177,40 @@ async function promptRepoDetails(source: string, existingNames: string[]): Promi
     },
   });
 
-  // role / tech / depends_on are all optional. Default to skipping so the
-  // common path is "pick a repo, confirm the name, move on".
-  const wantDetails = await confirm({
-    message: 'Configure role / tech / depends_on for this repository?',
-    default: false,
-  });
-  if (!wantDetails) {
-    return { source, as, role: undefined, tech: [], dependsOn: [] };
+  let role: string | undefined;
+  let tech: string[] = [];
+
+  const aiPrefilled = !!(suggestion && (suggestion.role || suggestion.tech.length > 0));
+  if (aiPrefilled) {
+    const roleInput = await input({
+      message: 'Role (AI suggestion, edit if needed):',
+      default: suggestion?.role ?? '',
+      required: false,
+    });
+    role = roleInput.trim() || undefined;
+    const techInput = await input({
+      message: 'Tech tags (AI suggestion, edit if needed):',
+      default: suggestion?.tech.join(' ') ?? '',
+      required: false,
+    });
+    tech = parseTech(techInput);
+  } else {
+    // role / tech / depends_on are all optional. Default to skipping so the
+    // common path is "pick a repo, confirm the name, move on".
+    const wantDetails = await confirm({
+      message: 'Configure role / tech / depends_on for this repository?',
+      default: false,
+    });
+    if (wantDetails) {
+      const roleInput = await input({ message: 'Role (optional):', required: false });
+      role = roleInput.trim() || undefined;
+      const techInput = await input({
+        message: 'Tech tags, space-separated (optional):',
+        required: false,
+      });
+      tech = parseTech(techInput);
+    }
   }
-
-  const role = await input({
-    message: 'Role (optional):',
-    required: false,
-  });
-
-  const techRaw = await input({
-    message: 'Tech tags, space-separated (optional):',
-    required: false,
-  });
-  const tech = techRaw
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
 
   let dependsOn: string[] = [];
   if (existingNames.length > 0) {
@@ -166,13 +221,7 @@ async function promptRepoDetails(source: string, existingNames: string[]): Promi
     dependsOn = deps;
   }
 
-  return {
-    source,
-    as,
-    role: role.trim() || undefined,
-    tech,
-    dependsOn,
-  };
+  return { source, as, role, tech, dependsOn };
 }
 
 export async function runSetup(ctx: CliContext): Promise<void> {
@@ -189,6 +238,18 @@ export async function runSetup(ctx: CliContext): Promise<void> {
       EXIT_CODE.NOT_FOUND,
       { hint: 'Run `ghq get <url>` first to clone repositories.' },
     );
+  }
+
+  // Detect AI coding CLIs (Claude Code and/or Codex) for optional role/tech
+  // inference. Failure to detect is non-fatal: the user just fills metadata
+  // manually (or skips it).
+  const aiTools = await detectAiTools(ctx.process);
+  let useAi = false;
+  if (aiTools.length > 0) {
+    useAi = await confirm({
+      message: `Use ${aiTools.join(' or ')} to infer role and tech tags for each repository?`,
+      default: true,
+    });
   }
 
   const name = await promptWorkspaceName();
@@ -209,7 +270,21 @@ export async function runSetup(ctx: CliContext): Promise<void> {
     if (picked.length === 0) break;
     for (const source of picked) {
       chosenSources.add(source);
-      const draft = await promptRepoDetails(source, usedNames);
+      let suggestion: AiSuggestion | undefined;
+      if (useAi && aiTools.length > 0) {
+        ctx.stderr(ctx.colors.dim(`→ inferring role/tech for ${source} ...`));
+        const repoCtx = await buildRepoContext(ctx, source);
+        for (const tool of aiTools) {
+          try {
+            suggestion = await suggestRoleTech(ctx.process, tool, repoCtx);
+            break;
+          } catch (e) {
+            // fall back to the next available AI CLI
+            ctx.stderr(ctx.colors.dim(`  ${tool} failed: ${(e as Error).message}`));
+          }
+        }
+      }
+      const draft = await promptRepoDetails(source, usedNames, suggestion);
       drafts.push(draft);
       usedNames.push(draft.as);
       ctx.stderr(ctx.colors.green(`✓ added ${draft.as} (${draft.source})\n`));
