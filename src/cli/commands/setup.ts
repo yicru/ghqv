@@ -150,10 +150,15 @@ async function buildRepoContext(ctx: CliContext, source: string): Promise<string
 }
 
 function parseTech(raw: string): string[] {
-  return raw
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of raw.split(/\s+/)) {
+    const v = t.trim();
+    if (v.length === 0 || seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
 }
 
 async function promptRepoDetails(

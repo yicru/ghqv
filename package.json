@@ -1,6 +1,6 @@
 {
   "name": "ghqv",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Virtual monorepo workspace manager for ghq-managed repositories",
   "type": "module",
   "bin": {
