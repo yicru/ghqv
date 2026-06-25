@@ -42,6 +42,7 @@ class Ghqv < Formula
   version "${version}"
 
   depends_on "ghq"
+  depends_on "fzf"
 
   on_macos do
     on_arm do

@@ -9,6 +9,7 @@
 - macOS または Linux
 - `git`
 - [`ghq`](https://github.com/x-motemen/ghq)
+- [`fzf`](https://github.com/junegunn/fzf) — `ghqv setup` のリポジトリ選択のみで使用
 
 配布バイナリは Bun `--compile` によるシングルバイナリのため、利用者側に Bun や Node.js は不要です。
 
@@ -20,7 +21,7 @@ Homebrew 経由 (専用 tap):
 brew install Yicru/tap/ghqv
 ```
 
-`ghq` が依存として自動的にインストールされます。その後:
+`ghq` と `fzf` が依存として自動的にインストールされます。その後:
 
 ```bash
 brew upgrade ghqv

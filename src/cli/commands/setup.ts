@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { checkbox, confirm, input } from '@inquirer/prompts';
 import type { Command } from 'commander';
 import { addRepository } from '../../application/edit-manifest';
@@ -24,7 +25,7 @@ function basename(source: string): string {
   return source.split('/').pop() ?? source;
 }
 
-function requireTty(ctx: CliContext): void {
+function requireInteractive(ctx: CliContext): void {
   if (ctx.options.json) {
     throw new GhqvError(
       'GHQV_USAGE_ERROR',
@@ -39,6 +40,51 @@ function requireTty(ctx: CliContext): void {
       EXIT_CODE.USAGE,
     );
   }
+}
+
+async function requireFzf(ctx: CliContext): Promise<void> {
+  try {
+    await ctx.process.run({ command: 'fzf', args: ['--version'], output: 'capture' });
+  } catch (e) {
+    throw new GhqvError(
+      'GHQV_EXTERNAL_COMMAND_FAILED',
+      '`fzf` is required for repository selection',
+      EXIT_CODE.EXTERNAL,
+      {
+        hint: 'Install fzf: `brew install fzf` (macOS) or see https://github.com/junegunn/fzf',
+        cause: e,
+      },
+    );
+  }
+}
+
+/**
+ * Run `fzf` in multi-select mode, feeding `items` on stdin and returning the
+ * selected entries. fzf renders its UI on /dev/tty, so stdin/stdout can be
+ * piped while the picker still runs interactively. Returns null when the user
+ * cancels (Esc / Ctrl-C / Ctrl-G).
+ */
+function fzfMulti(items: string[], prompt: string, header: string): string[] | null {
+  if (items.length === 0) return [];
+  const input = `${items.join('\n')}\n`;
+  const result = spawnSync(
+    'fzf',
+    [
+      '--multi',
+      `--prompt=${prompt}`,
+      `--header=${header}`,
+      '--height=40%',
+      '--reverse',
+      '--border',
+      '--no-info',
+      '--bind=ctrl-a:select-all,ctrl-d:deselect-all',
+    ],
+    { input, stdio: ['pipe', 'pipe', 'inherit'] },
+  );
+  if (result.status !== 0) return null; // user cancelled (Esc/Ctrl-C) or no selection
+  const out = (result.stdout?.toString('utf8') ?? '').trim();
+  if (out.length === 0) return [];
+  return out.split('\n');
 }
 
 async function promptWorkspaceName(): Promise<string> {
@@ -65,13 +111,9 @@ async function promptDescription(): Promise<string | undefined> {
 async function promptRepositories(all: string[], already: Set<string>): Promise<string[]> {
   const available = all.filter((s) => !already.has(s)).sort((a, b) => a.localeCompare(b));
   if (available.length === 0) return [];
-  return checkbox<string>({
-    message: 'Select repositories (type to filter, space to toggle, enter to confirm):',
-    pageSize: 15,
-    required: true,
-    choices: available.map((s) => ({ name: s, value: s })),
-    validate: (chosen) => (chosen.length > 0 ? true : 'select at least one repository'),
-  });
+  const header = `${available.length} repository(ies) | TAB select | CTRL-A all | CTRL-D none | ENTER confirm`;
+  const picked = fzfMulti(available, 'Repositories> ', header);
+  return picked ?? [];
 }
 
 async function promptRepoDetails(source: string, existingNames: string[]): Promise<RepoDraft> {
@@ -134,7 +176,8 @@ async function promptRepoDetails(source: string, existingNames: string[]): Promi
 }
 
 export async function runSetup(ctx: CliContext): Promise<void> {
-  requireTty(ctx);
+  requireInteractive(ctx);
+  await requireFzf(ctx);
 
   ctx.stderr(`${ctx.colors.bold('ghqv setup')} — interactive workspace builder\n`);
 
@@ -157,8 +200,9 @@ export async function runSetup(ctx: CliContext): Promise<void> {
 
   ctx.stderr(`\nFound ${all.length} ghq-managed repository(ies). Select the ones to include.\n`);
 
-  // Batch-select multiple repositories at once (space to toggle). After each
-  // batch the user can optionally pick more from the remaining list.
+  // Batch-select multiple repositories with fzf (Tab to toggle, Enter to
+  // confirm). After each batch the user can optionally pick more from the
+  // remaining list.
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const picked = await promptRepositories(all, chosenSources);
