@@ -1,4 +1,4 @@
-import { checkbox, confirm, input, search } from '@inquirer/prompts';
+import { checkbox, confirm, input } from '@inquirer/prompts';
 import type { Command } from 'commander';
 import { addRepository } from '../../application/edit-manifest';
 import { initWorkspace } from '../../application/init-workspace';
@@ -22,18 +22,6 @@ const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 function basename(source: string): string {
   return source.split('/').pop() ?? source;
-}
-
-function fuzzyMatch(term: string | undefined, target: string): boolean {
-  if (!term) return true;
-  const t = term.toLowerCase();
-  const g = target.toLowerCase();
-  let i = 0;
-  for (const ch of g) {
-    if (ch === t[i]) i++;
-    if (i >= t.length) return true;
-  }
-  return false;
 }
 
 function requireTty(ctx: CliContext): void {
@@ -74,23 +62,16 @@ async function promptDescription(): Promise<string | undefined> {
   return desc.trim() || undefined;
 }
 
-async function promptRepository(all: string[], chosen: Set<string>): Promise<string | null> {
-  const available = all.filter((s) => !chosen.has(s));
-  if (available.length === 0) return null;
-  const selection = await search<string>({
-    message: 'Pick a repository (type to fuzzy find):',
-    source: (term) => {
-      const filtered = available
-        .filter((s) => fuzzyMatch(term, s))
-        .sort((a, b) => a.localeCompare(b));
-      if (filtered.length === 0) {
-        return [{ name: 'no matches', value: '', disabled: true }];
-      }
-      return filtered.map((s) => ({ name: s, value: s }));
-    },
+async function promptRepositories(all: string[], already: Set<string>): Promise<string[]> {
+  const available = all.filter((s) => !already.has(s)).sort((a, b) => a.localeCompare(b));
+  if (available.length === 0) return [];
+  return checkbox<string>({
+    message: 'Select repositories (type to filter, space to toggle, enter to confirm):',
+    pageSize: 15,
+    required: true,
+    choices: available.map((s) => ({ name: s, value: s })),
+    validate: (chosen) => (chosen.length > 0 ? true : 'select at least one repository'),
   });
-  if (!selection) return null;
-  return selection;
 }
 
 async function promptRepoDetails(source: string, existingNames: string[]): Promise<RepoDraft> {
@@ -176,18 +157,23 @@ export async function runSetup(ctx: CliContext): Promise<void> {
 
   ctx.stderr(`\nFound ${all.length} ghq-managed repository(ies). Select the ones to include.\n`);
 
+  // Batch-select multiple repositories at once (space to toggle). After each
+  // batch the user can optionally pick more from the remaining list.
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const picked = await promptRepository(all, chosenSources);
-    if (!picked) break; // user cancelled the search prompt
-    chosenSources.add(picked);
-    const draft = await promptRepoDetails(picked, usedNames);
-    drafts.push(draft);
-    usedNames.push(draft.as);
-    ctx.stderr(ctx.colors.green(`✓ added ${draft.as} (${draft.source})\n`));
+    const picked = await promptRepositories(all, chosenSources);
+    if (picked.length === 0) break;
+    for (const source of picked) {
+      chosenSources.add(source);
+      const draft = await promptRepoDetails(source, usedNames);
+      drafts.push(draft);
+      usedNames.push(draft.as);
+      ctx.stderr(ctx.colors.green(`✓ added ${draft.as} (${draft.source})\n`));
+    }
+    if (chosenSources.size >= all.length) break;
     const more = await confirm({
-      message: 'Add another repository?',
-      default: drafts.length < 3,
+      message: 'Add more repositories from the remaining list?',
+      default: false,
     });
     if (!more) break;
   }
