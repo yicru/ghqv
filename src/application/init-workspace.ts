@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { stringify } from 'yaml';
+import { Document } from 'yaml';
 import type { CliContext } from '../cli/context';
 import { resolveWorkspaceRoot } from '../cli/context';
 import { EXIT_CODE, GhqvError } from '../domain/errors';
@@ -12,6 +12,7 @@ import {
   normalizeManifest,
 } from '../domain/manifest';
 import { validateWorkspaceName } from '../domain/workspace';
+import { stringifyManifest } from '../infrastructure/manifest/format';
 import { renderAgents } from '../rendering/agents';
 import { renderClaude } from '../rendering/claude';
 import { renderGitignore } from '../rendering/gitignore';
@@ -82,7 +83,7 @@ export async function initWorkspace(
 
   const manifest: ManifestV1 = emptyManifest(name);
   if (description) manifest.workspace.description = description;
-  const content = stringify(manifest);
+  const content = stringifyManifest(new Document(manifest));
   await ctx.manifest.write(wsPath, content);
 
   await regenerateManagedFiles(ctx, wsPath, normalizeManifest(manifest));

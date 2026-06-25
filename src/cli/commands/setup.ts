@@ -352,6 +352,18 @@ export async function runSetup(ctx: CliContext): Promise<void> {
   });
   ctx.stdout(renderSyncPlan(outcome.plan.actions, ctx.colors));
 
+  // Create the initial commit so the workspace ships as a clean starting
+  // point (manifest + generated files; symlinked sources are gitignored).
+  try {
+    await ctx.git.addAll(wsPath);
+    await ctx.git.commit(wsPath, `Initial ghqv workspace: ${name}`);
+    ctx.stderr(ctx.colors.green('✓ initial commit created'));
+  } catch (e) {
+    ctx.stderr(
+      ctx.colors.yellow(`warning: could not create initial commit: ${(e as Error).message}`),
+    );
+  }
+
   if (ctx.options.json) {
     emitJson(okEnvelope('setup', { path: wsPath, repositories: drafts.map((d) => d.as) }));
   } else {

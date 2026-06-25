@@ -43,6 +43,8 @@ export interface GitClient {
   branch(path: string): Promise<string | null>;
   shortHead(path: string): Promise<string | null>;
   isDirty(path: string): Promise<boolean>;
+  addAll(path: string): Promise<void>;
+  commit(path: string, message: string): Promise<void>;
 }
 
 export interface FileEntry {

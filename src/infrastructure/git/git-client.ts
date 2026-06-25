@@ -96,4 +96,22 @@ export class GitProcessClient implements GitClient {
     });
     return r.stdout.trim().length > 0;
   }
+
+  async addAll(path: string): Promise<void> {
+    await this.runner.run({
+      command: 'git',
+      args: ['-C', path, 'add', '-A'],
+      output: 'capture',
+      stdin: 'ignore',
+    });
+  }
+
+  async commit(path: string, message: string): Promise<void> {
+    await this.runner.run({
+      command: 'git',
+      args: ['-C', path, 'commit', '-m', message],
+      output: 'capture',
+      stdin: 'ignore',
+    });
+  }
 }

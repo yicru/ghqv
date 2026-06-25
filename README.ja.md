@@ -33,18 +33,18 @@ brew upgrade ghqv
 
 ```bash
 # ワークスペース作成
-ghqv init myapp-vmono
+ghqv init myapp
 
 # 移動
-cd "$(ghqv path myapp-vmono)"
+cd "$(ghqv path myapp)"
 
-# organization をまたいで repository を登録
-ghqv add github.com/organization-a/backend \
+# repository を登録
+ghqv add github.com/acme/backend \
   --as backend \
   --role "Backend API and services" \
   --tech TypeScript Hono
 
-ghqv add github.com/organization-b/frontend \
+ghqv add github.com/acme/frontend \
   --as frontend \
   --role "Web frontend" \
   --tech TypeScript React \
@@ -60,11 +60,36 @@ ghqv sync
 ghqv status
 ```
 
+生成される `.ghqv.yaml` は block 形式で、リストは1行表記になります:
+
+```yaml
+version: 1
+workspace:
+  name: myapp
+  default_mode: link
+  auto_get: true
+repositories:
+  backend:
+    source: github.com/acme/backend
+    role: Backend API and services
+    tech:
+      - TypeScript
+      - Hono
+  frontend:
+    source: github.com/acme/frontend
+    role: Web frontend
+    tech:
+      - TypeScript
+      - React
+    depends_on:
+      - backend
+```
+
 チーム共有済みワークスペースの場合:
 
 ```bash
-ghqv clone git@github.com:organization-a/myapp-vmono.git
-cd "$(ghqv path myapp-vmono)"
+ghqv clone git@github.com:acme/myapp.git
+cd "$(ghqv path myapp)"
 ghqv status
 ```
 

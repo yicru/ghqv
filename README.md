@@ -33,18 +33,18 @@ Alternatively, grab a binary from the [releases](https://github.com/Yicru/ghqv/r
 
 ```bash
 # Create a workspace
-ghqv init myapp-vmono
+ghqv init myapp
 
 # Move into it
-cd "$(ghqv path myapp-vmono)"
+cd "$(ghqv path myapp)"
 
-# Register repositories across organizations
-ghqv add github.com/organization-a/backend \
+# Register repositories
+ghqv add github.com/acme/backend \
   --as backend \
   --role "Backend API and services" \
   --tech TypeScript Hono
 
-ghqv add github.com/organization-b/frontend \
+ghqv add github.com/acme/frontend \
   --as frontend \
   --role "Web frontend" \
   --tech TypeScript React \
@@ -60,11 +60,36 @@ ghqv sync
 ghqv status
 ```
 
+The resulting `.ghqv.yaml` manifest uses block style with inline lists:
+
+```yaml
+version: 1
+workspace:
+  name: myapp
+  default_mode: link
+  auto_get: true
+repositories:
+  backend:
+    source: github.com/acme/backend
+    role: Backend API and services
+    tech:
+      - TypeScript
+      - Hono
+  frontend:
+    source: github.com/acme/frontend
+    role: Web frontend
+    tech:
+      - TypeScript
+      - React
+    depends_on:
+      - backend
+```
+
 For a team-shared workspace:
 
 ```bash
-ghqv clone git@github.com:organization-a/myapp-vmono.git
-cd "$(ghqv path myapp-vmono)"
+ghqv clone git@github.com:acme/myapp.git
+cd "$(ghqv path myapp)"
 ghqv status
 ```
 
@@ -95,6 +120,20 @@ ghqv setup
 | `ghqv config` | Manage configuration |
 
 Global options: `-w/--workspace`, `--workspace-root`, `--json`, `--color`, `-q/--quiet`, `-v/--verbose`.
+
+## Manifest schema
+
+The workspace manifest is described by a published [JSON Schema](schema/ghqv-manifest.schema.json). Point your editor at it to get completion and validation while editing `.ghqv.yaml`:
+
+```yaml
+# yaml-language-server: $schema=https://github.com/Yicru/ghqv/raw/main/schema/ghqv-manifest.schema.json
+version: 1
+workspace:
+  name: myapp
+repositories: {}
+```
+
+VS Code (with the [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)), Neovim, JetBrains, and other editors honor this `$schema` directive.
 
 ## Design
 

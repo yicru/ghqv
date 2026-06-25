@@ -1,4 +1,4 @@
-import { parseDocument, stringify } from 'yaml';
+import { parseDocument } from 'yaml';
 import type { CliContext } from '../cli/context';
 import { EXIT_CODE, GhqvError } from '../domain/errors';
 import {
@@ -7,6 +7,7 @@ import {
   normalizeSource,
   validateName,
 } from '../domain/manifest';
+import { stringifyManifest } from '../infrastructure/manifest/format';
 import { regenerateManagedFiles } from './init-workspace';
 import { resolveWorkspace } from './inspect-workspace';
 
@@ -50,7 +51,7 @@ export async function addRepository(ctx: CliContext, opts: AddOptions): Promise<
   if (opts.dependsOn?.length) entry.depends_on = opts.dependsOn;
   doc.setIn(['repositories', name], doc.createNode(entry));
 
-  const newContent = stringify(doc);
+  const newContent = stringifyManifest(doc);
   const newManifest = doc.toJSON() as ManifestV1;
   normalizeManifest(newManifest);
   await ctx.manifest.write(ws.path, newContent);
@@ -104,7 +105,7 @@ export async function removeRepository(
     }
   }
 
-  const newContent = stringify(doc);
+  const newContent = stringifyManifest(doc);
   const newManifest = doc.toJSON() as ManifestV1;
   normalizeManifest(newManifest);
   await ctx.manifest.write(ws.path, newContent);

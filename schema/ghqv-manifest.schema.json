@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Yicru/ghqv/raw/main/schema/ghqv-manifest.schema.json",
+  "title": "ghqv workspace manifest",
+  "description": "Manifest for a ghqv virtual workspace. Edit `.ghqv.yaml` at the workspace root.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "workspace", "repositories"],
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "Manifest schema version. Currently only 1 is supported."
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+          "description": "Logical workspace name."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Optional human-readable description."
+        },
+        "default_mode": {
+          "const": "link",
+          "description": "How repositories are materialized. Currently only `link` (symlink)."
+        },
+        "auto_get": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run `ghq get` for sources that are not present locally during sync."
+        }
+      }
+    },
+    "repositories": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Map of logical repository name to its spec. Keys must match the name pattern.",
+      "patternProperties": {
+        "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source"],
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "Canonical source in `host/namespace/repository` form (e.g. github.com/acme/backend)."
+            },
+            "path": {
+              "type": "string",
+              "description": "Workspace-relative path for the symlink. Defaults to the repository name."
+            },
+            "role": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Short single-line role description."
+            },
+            "tech": {
+              "type": "array",
+              "maxItems": 20,
+              "items": { "type": "string", "minLength": 1, "maxLength": 100 },
+              "description": "Technology tags."
+            },
+            "depends_on": {
+              "type": "array",
+              "maxItems": 1000,
+              "items": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "description": "Logical names of repositories this one depends on."
+            },
+            "mode": {
+              "const": "link",
+              "description": "Materialization mode override. Currently only `link`."
+            }
+          }
+        }
+      }
+    }
+  }
+}
