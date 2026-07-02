@@ -12,6 +12,7 @@ import { renderSyncPlan } from '../../presentation/console-reporter';
 import { emitJson, okEnvelope } from '../../presentation/json-reporter';
 import { type AiSuggestion, type AiTool, detectAiTools, suggestRoleTech } from '../ai';
 import type { CliContext } from '../context';
+import { formatTechTagsInput, parseTechTagsInput } from '../tech-tags';
 
 interface RepoDraft {
   source: string;
@@ -149,18 +150,6 @@ async function buildRepoContext(ctx: CliContext, source: string): Promise<string
   return out;
 }
 
-function parseTech(raw: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const t of raw.split(/\s+/)) {
-    const v = t.trim();
-    if (v.length === 0 || seen.has(v)) continue;
-    seen.add(v);
-    out.push(v);
-  }
-  return out;
-}
-
 async function promptRepoDetails(
   source: string,
   existingNames: string[],
@@ -195,10 +184,10 @@ async function promptRepoDetails(
     role = roleInput.trim() || undefined;
     const techInput = await input({
       message: 'Tech tags (AI suggestion, edit if needed):',
-      default: suggestion?.tech.join(' ') ?? '',
+      default: formatTechTagsInput(suggestion?.tech ?? []),
       required: false,
     });
-    tech = parseTech(techInput);
+    tech = parseTechTagsInput(techInput);
   } else {
     // role / tech / depends_on are all optional. Default to skipping so the
     // common path is "pick a repo, confirm the name, move on".
@@ -210,10 +199,10 @@ async function promptRepoDetails(
       const roleInput = await input({ message: 'Role (optional):', required: false });
       role = roleInput.trim() || undefined;
       const techInput = await input({
-        message: 'Tech tags, space-separated (optional):',
+        message: 'Tech tags, comma-separated (optional):',
         required: false,
       });
-      tech = parseTech(techInput);
+      tech = parseTechTagsInput(techInput);
     }
   }
 
